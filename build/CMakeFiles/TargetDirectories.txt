@@ -1,0 +1,3 @@
+/home/dinichthys/Codiruiy/Microscope/build/CMakeFiles/microscope.dir
+/home/dinichthys/Codiruiy/Microscope/build/CMakeFiles/edit_cache.dir
+/home/dinichthys/Codiruiy/Microscope/build/CMakeFiles/rebuild_cache.dir

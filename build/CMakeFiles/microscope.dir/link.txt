@@ -1,0 +1,1 @@
+/usr/bin/g++ -g -march=native -Wl,-q -export-dynamic -Og -g3 -DDEBUG -ggdb -fsanitize=address,leak,undefined CMakeFiles/microscope.dir/main.cpp.o CMakeFiles/microscope.dir/Logger/logging.cpp.o -o microscope 
