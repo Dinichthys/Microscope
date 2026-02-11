@@ -1,23 +1,25 @@
 #include "microscope.hpp"
 
-int BinSearch(MicroInt* arr, MicroInt val, MicroInt len);
+int BinSearch(Micro<int>* arr, Micro<int> val, Micro<int> len);
 
 int main() {
     SetLogLevel(kDebug);
 
-    MicroInt arr[10] = {};
+    Micro<int> arr[10] = {};
 
-    MICRO_INT(size, 10);
-    for (MICRO_INT(i,0); i < size; i++) {
+    MICRO(int, size, 10);
+    for (MICRO(int, i,0); i < size; i++) {
         arr[i] = i;
     }
 
-    MICRO_INT(var, 4);
+    MICRO(int, var, 4);
     fprintf(stdout, "Found index is %d\n", BinSearch(arr, var, size));
+
+    // Micro<int>::graph_builder.Draw();
 }
 
-int BinSearch(MicroInt* arr, MicroInt val, MicroInt size) {
-    MICRO_INT(ind, size / 2);
+int BinSearch(Micro<int>* arr, Micro<int> val, Micro<int> size) {
+    MICRO(int, ind, size / 2);
 
     if ((size == 1) && (val != arr[ind])) {
         return -1;

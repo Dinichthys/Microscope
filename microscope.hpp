@@ -3,47 +3,55 @@
 #include <string>
 
 #include "Logger/logging.hpp"
+#include "graph_builder.hpp"
 
 #define RED "\033[31m"
 #define WHITE "\033[0m"
 #define GREEN "\033[32m"
 
+template<class T>
+class Micro {
+    public:
+        static GraphBuilder graph_builder;
 
-class MicroInt {
     private:
-        int val_;
+        size_t graph_id_;
+
+        T val_;
 
         std::string name_;
 
     public:
-        explicit MicroInt(int val = 0, std::string&& name = "")
+        explicit Micro(int val = 0, std::string&& name = "")
             :name_(name) {
             LOG(kDebug, "Constructor was called with arguments:\n"
-                        "\tval = \"%d\"\n"
-                        "\tname = \"%s\"\n", val, name.c_str());
+                        "\tname = \"%s\"\n", name.c_str());
             val_ = val;
+            graph_id_ = graph_builder.AddNode(name);
         };
 
-        MicroInt(MicroInt& other)
+        Micro(Micro& other)
             :name_("copied_" + other.name_) {
             LOG(kDebug, RED "Copy" WHITE " constructor was called with arguments:\n"
-                        "\tval = \"%d\"\n"
-                        "\tname = \"%s\"\n", other.val_, other.name_.c_str());
+                        "\tname = \"%s\"\n", other.name_.c_str());
             val_ = other.val_;
+            graph_id_ = graph_builder.AddNode(name_);
+            graph_builder.AddEdge(other.graph_id_, graph_id_, kCopy);
         };
 
-        MicroInt(MicroInt&& other)
+        Micro(Micro&& other)
             :name_("moved_" + other.name_) {
             LOG(kDebug, GREEN "Move" WHITE " constructor was called with arguments:\n"
-                        "\tval = \"%d\"\n"
-                        "\tname = \"%s\"\n", other.val_, other.name_.c_str());
+                        "\tname = \"%s\"\n", other.name_.c_str());
             val_ = other.val_;
+            graph_id_ = graph_builder.AddNode(name_);
+            graph_builder.AddEdge(other.graph_id_, graph_id_, kMove);
         };
 
 #define OP_TWO_ARGS(op, op_name)                                                                \
-        MicroInt operator op(MicroInt A) {                                                      \
+        Micro operator op(Micro A) {                                                      \
             LOG(kDebug, "%s var \"%s\" and \"%s\"\n", op_name, name_.c_str(), A.name_.c_str()); \
-            return MicroInt(val_ op A.val_, "");                                                \
+            return Micro(val_ op A.val_, "");                                                \
         };
 
         OP_TWO_ARGS(+, "Add");
@@ -81,9 +89,9 @@ class MicroInt {
 #undef OP_TWO_ARGS
 
 #define OP_ONE_ARG(op, op_name)                                                     \
-        MicroInt operator op() {                                                    \
+        Micro operator op() {                                                    \
             LOG(kDebug, "%s with var \"%s\" and \"%s\"\n", op_name, name_.c_str()); \
-            return MicroInt(op val_, "");                                           \
+            return Micro(op val_, "");                                           \
         };
 
         OP_ONE_ARG(+, "Unary plus");
@@ -98,49 +106,31 @@ class MicroInt {
 
 #undef OP_ONE_ARG
 
-        MicroInt operator ++(int) {
+        Micro operator ++(int) {
             LOG(kDebug, "Postfix increment var \"%s\"\n", name_.c_str());
-            return MicroInt(val_++, "");
+            return Micro(val_++, "");
         };
-        MicroInt operator --(int) {
+        Micro operator --(int) {
             LOG(kDebug, "Postfix decrement var \"%s\"\n", name_.c_str());
-            return MicroInt(val_--, "");
+            return Micro(val_--, "");
         };
 
-        MicroInt& operator =(MicroInt A) {
+        Micro& operator =(Micro A) {
             LOG(kDebug, "Assign var \"%s\" and \"%s\"\n", name_.c_str(), A.name_.c_str());
             val_ = A.val_;
             return *this;
         };
 
-        MicroInt operator[](MicroInt) = delete;
-        MicroInt operator*() = delete;
-        MicroInt* operator&() {
+        Micro operator[](Micro) = delete;
+        Micro operator*() = delete;
+        Micro* operator&() {
             LOG(kDebug, "Got pointer on var \"%s\"\n", name_.c_str());
             return this;
         };
 
-        operator int() const {
+        operator T() const {
             return val_;
         };
-
-// #define BOOL_OP_TWO_ARGS(op, op_name)                                                       \
-         bool operator op(MicroInt A) {                                                      \
-             LOG(kDebug, "%s var \"%s\" and \"%s\"\n", op_name, name_.c_str(), A.name_.c_str()); \
-             return val_ op A.val_;                                                          \
-         };
-//
-//         BOOL_OP_TWO_ARGS(||, "Logical or");
-//         BOOL_OP_TWO_ARGS(&&, "Logical and");
-//         BOOL_OP_TWO_ARGS(==, "Comparison (equality)");
-//         BOOL_OP_TWO_ARGS(!=, "Comparison (not equality)");
-//         BOOL_OP_TWO_ARGS(>, "Comparison (more)");
-//         BOOL_OP_TWO_ARGS(<, "Comparison (less)");
-//         BOOL_OP_TWO_ARGS(>=, "Comparison (more or equal)");
-//         BOOL_OP_TWO_ARGS(<=, "Comparison (less or equal)");
-//
-// #undef BOOL_OP_TWO_ARGS
-
 };
 
-#define MICRO_INT(var, val) MicroInt var(val, #var)
+#define MICRO(type, var, val) Micro<type> var(val, #var)
