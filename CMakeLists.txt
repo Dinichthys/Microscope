@@ -37,6 +37,7 @@ target_compile_options (${PROJECT_NAME}
         -march=native
         $<$<CONFIG:Debug>:
             -Og
+            -fno-elide-constructors
             -g3
             -DDEBUG
             -ggdb

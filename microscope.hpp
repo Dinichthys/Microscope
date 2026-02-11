@@ -12,7 +12,7 @@
 template<class T>
 class Micro {
     public:
-        static GraphBuilder graph_builder;
+        inline static GraphBuilder graph_builder;
 
     private:
         size_t graph_id_;
@@ -22,7 +22,7 @@ class Micro {
         std::string name_;
 
     public:
-        explicit Micro(int val = 0, std::string&& name = "")
+        explicit Micro(T val = 0, std::string&& name = "")
             :name_(name) {
             LOG(kDebug, "Constructor was called with arguments:\n"
                         "\tname = \"%s\"\n", name.c_str());
@@ -48,76 +48,86 @@ class Micro {
             graph_builder.AddEdge(other.graph_id_, graph_id_, kMove);
         };
 
-#define OP_TWO_ARGS(op, op_name)                                                                \
-        Micro operator op(Micro A) {                                                      \
-            LOG(kDebug, "%s var \"%s\" and \"%s\"\n", op_name, name_.c_str(), A.name_.c_str()); \
-            return Micro(val_ op A.val_, "");                                                \
+#define OP_TWO_ARGS(op, op_type)                                                                            \
+        Micro operator op(Micro A) {                                                                        \
+            LOG(kDebug, "%s var \"%s\" and \"%s\"\n", kOpName.at(op_type), name_.c_str(), A.name_.c_str()); \
+            Micro res(val_ op A.val_, "");                                                               \
+            graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                                       \
+            graph_builder.AddEdge(A.graph_id_, res.graph_id_, op_type);                                     \
+            return res;                                                                                     \
         };
 
-        OP_TWO_ARGS(+, "Add");
-        OP_TWO_ARGS(-, "Sub");
-        OP_TWO_ARGS(*, "Mul");
-        OP_TWO_ARGS(/, "Div");
-        OP_TWO_ARGS(%, "Mod");
+        OP_TWO_ARGS(+, kAdd);
+        OP_TWO_ARGS(-, kSub);
+        OP_TWO_ARGS(*, kMul);
+        OP_TWO_ARGS(/, kDiv);
+        OP_TWO_ARGS(%, kMod);
 
-        OP_TWO_ARGS(&, "Bin and");
-        OP_TWO_ARGS(|, "Bin or");
-        OP_TWO_ARGS(^, "Bin xor");
-        OP_TWO_ARGS(<<, "Bin left shift");
-        OP_TWO_ARGS(>>, "Bin right shift");
+        OP_TWO_ARGS(&, kBinAnd);
+        OP_TWO_ARGS(|, kBinOr);
+        OP_TWO_ARGS(^, kBinXor);
+        OP_TWO_ARGS(<<, kBinLeftShift);
+        OP_TWO_ARGS(>>, kBinRightShift);
 
-        OP_TWO_ARGS(||, "Logical or");
-        OP_TWO_ARGS(&&, "Logical and");
-        OP_TWO_ARGS(==, "Comparison (equality)");
-        OP_TWO_ARGS(!=, "Comparison (not equality)");
-        OP_TWO_ARGS(>, "Comparison (more)");
-        OP_TWO_ARGS(<, "Comparison (less)");
-        OP_TWO_ARGS(>=, "Comparison (more or equal)");
-        OP_TWO_ARGS(<=, "Comparison (less or equal)");
+        OP_TWO_ARGS(||, kLogicalOr);
+        OP_TWO_ARGS(&&, kLogicalAnd);
+        OP_TWO_ARGS(==, kCmpEq);
+        OP_TWO_ARGS(!=, kCmpNEq);
+        OP_TWO_ARGS(>, kCmpMore);
+        OP_TWO_ARGS(<, kCmpLess);
+        OP_TWO_ARGS(>=, kCmpMoreEq);
+        OP_TWO_ARGS(<=, kCmpLessEq);
 
-        OP_TWO_ARGS(+=, "Add and assign");
-        OP_TWO_ARGS(-=, "Sub and assign");
-        OP_TWO_ARGS(*=, "Mul and assign");
-        OP_TWO_ARGS(/=, "Div and assign");
-        OP_TWO_ARGS(%=, "Mod and assign");
-        OP_TWO_ARGS(&=, "And and assign");
-        OP_TWO_ARGS(|=, "Or and assign");
-        OP_TWO_ARGS(^=, "Xor and assign");
-        OP_TWO_ARGS(<<=, "Shift left and assign");
-        OP_TWO_ARGS(>>=, "Shift right and assign");
+        OP_TWO_ARGS(+=, kAddAssign);
+        OP_TWO_ARGS(-=, kSubAssign);
+        OP_TWO_ARGS(*=, kMulAssign);
+        OP_TWO_ARGS(/=, kDivAssign);
+        OP_TWO_ARGS(%=, kModAssign);
+        OP_TWO_ARGS(&=, kAndAssign);
+        OP_TWO_ARGS(|=, kOrAssign);
+        OP_TWO_ARGS(^=, kXorAssign);
+        OP_TWO_ARGS(<<=, kShiftLeftAssign);
+        OP_TWO_ARGS(>>=, kShiftRightAssign);
 
 #undef OP_TWO_ARGS
 
-#define OP_ONE_ARG(op, op_name)                                                     \
-        Micro operator op() {                                                    \
-            LOG(kDebug, "%s with var \"%s\" and \"%s\"\n", op_name, name_.c_str()); \
-            return Micro(op val_, "");                                           \
+#define OP_ONE_ARG(op, op_type)                                                                  \
+        Micro operator op() {                                                                    \
+            LOG(kDebug, "%s with var \"%s\" and \"%s\"\n",  kOpName.at(op_type), name_.c_str()); \
+            Micro res(op val_, "");                                                              \
+            graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                                       \
+            return res;                                                                          \
         };
 
-        OP_ONE_ARG(+, "Unary plus");
-        OP_ONE_ARG(-, "Unary minus");
+        OP_ONE_ARG(+, kUnaryPlus);
+        OP_ONE_ARG(-, kUnaryMinus);
 
-        OP_ONE_ARG(++, "Prefix increment");
-        OP_ONE_ARG(--, "Prefix decrement");
+        OP_ONE_ARG(++, kPrefixInc);
+        OP_ONE_ARG(--, kPrefixDec);
 
-        OP_ONE_ARG(!, "Logical not");
+        OP_ONE_ARG(!, kLogicalNot);
 
-        OP_ONE_ARG(~, "Bin not");
+        OP_ONE_ARG(~, kBinNot);
 
 #undef OP_ONE_ARG
 
         Micro operator ++(int) {
             LOG(kDebug, "Postfix increment var \"%s\"\n", name_.c_str());
-            return Micro(val_++, "");
+            Micro res(val_++, "");
+            graph_builder.AddEdge(graph_id_, res.graph_id_, kPostfixInc);
+            return res;
         };
         Micro operator --(int) {
             LOG(kDebug, "Postfix decrement var \"%s\"\n", name_.c_str());
-            return Micro(val_--, "");
+            Micro res(val_--, "");
+            graph_builder.AddEdge(graph_id_, res.graph_id_, kPostfixDec);
+            return res;
         };
 
         Micro& operator =(Micro A) {
             LOG(kDebug, "Assign var \"%s\" and \"%s\"\n", name_.c_str(), A.name_.c_str());
             val_ = A.val_;
+            graph_builder.AddEdge(A.graph_id_, graph_id_, kAssign);
             return *this;
         };
 

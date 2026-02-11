@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <map>
 
 class Node {
     private:
@@ -20,7 +21,7 @@ class Node {
             output << "\t\"node" << id_ << "\"\n\t[\n"
                                 "\t\tlabel = \""
                                 "{ " << id_ << " id | "
-                                << ((name_.compare("")) ? "TMP" : name_.c_str()) << "  }\"\n"
+                                << ((name_.compare("")) ? name_.c_str() : "TMP") << "  }\"\n"
                                 "\t\tshape = \"record\"\n"
                                 "\t\tstyle = \"filled\"\n"
                                 "\t\tfillcolor = \"white\"\n"
@@ -32,11 +33,110 @@ class Node {
 enum Type {
     kCopy,
     kMove,
+
+    kAdd,
+    kSub,
+    kMul,
+    kDiv,
+    kMod,
+
+    kBinAnd,
+    kBinOr,
+    kBinXor,
+    kBinLeftShift,
+    kBinRightShift,
+
+    kLogicalOr,
+    kLogicalAnd,
+    kCmpEq,
+    kCmpNEq,
+    kCmpMore,
+    kCmpLess,
+    kCmpMoreEq,
+    kCmpLessEq,
+
+    kAddAssign,
+    kSubAssign,
+    kMulAssign,
+    kDivAssign,
+    kModAssign,
+    kAndAssign,
+    kOrAssign,
+    kXorAssign,
+    kShiftLeftAssign,
+    kShiftRightAssign,
+
+    kUnaryPlus,
+    kUnaryMinus,
+
+    kPrefixInc,
+    kPrefixDec,
+
+    kLogicalNot,
+
+    kBinNot,
+
+    kPostfixInc,
+    kPostfixDec,
+
     kAssign
+};
+
+const std::map<Type, std::string> kOpName {
+    {kCopy, "Copy construct"},
+    {kMove, "Move construct"},
+
+    {kAdd, "Add"},
+    {kSub, "Sub"},
+    {kMul, "Mul"},
+    {kDiv, "Div"},
+    {kMod, "Mod"},
+
+    {kBinAnd, "Bin and"},
+    {kBinOr, "Bin or"},
+    {kBinXor, "Bin xor"},
+    {kBinLeftShift, "Bin left shift"},
+    {kBinRightShift, "Bin right shift"},
+
+    {kLogicalOr, "Logical or"},
+    {kLogicalAnd, "Logical and"},
+    {kCmpEq, "Comparison (equality)"},
+    {kCmpNEq, "Comparison (not equality)"},
+    {kCmpMore, "Comparison (more)"},
+    {kCmpLess, "Comparison (less)"},
+    {kCmpMoreEq, "Comparison (more or equal)"},
+    {kCmpLessEq, "Comparison (less or equal)"},
+
+    {kAddAssign, "Add and assign"},
+    {kSubAssign, "Sub and assign"},
+    {kMulAssign, "Mul and assign"},
+    {kDivAssign, "Div and assign"},
+    {kModAssign, "Mod and assign"},
+    {kAndAssign, "And and assign"},
+    {kOrAssign, "Or and assign"},
+    {kXorAssign, "Xor and assign"},
+    {kShiftLeftAssign, "Shift left and assign"},
+    {kShiftRightAssign, "Shift right and assign"},
+
+    {kUnaryPlus, "Unary plus"},
+    {kUnaryMinus, "Unary minus"},
+
+    {kPrefixInc, "Prefix increment"},
+    {kPrefixDec, "Prefix decrement"},
+
+    {kLogicalNot, "Logical not"},
+
+    {kBinNot, "Bin not"},
+
+    {kPostfixInc, "Postfix increment"},
+    {kPostfixDec, "Postfix decrement"},
+
+    {kAssign, "Assign"},
 };
 
 const char* const kRed = "red";
 const char* const kGreen = "green";
+const char* const kBlack = "black";
 
 class Edge {
     private:
@@ -53,7 +153,8 @@ class Edge {
 
         void Print(std::ostream& output) {
             output << "\t\"node" << id_start_ << "\" -> \"node" << id_end_ << "\""
-                    "[color = \"" << (((type_ == kCopy) || (type_ == kAssign)) ? kRed : kGreen) << "\"];\n\n";
+                    "[color = \"" << ((type_ == kCopy) ? kRed : (type_ == kMove) ? kGreen : kBlack) << "\""
+                    " label = \"" << kOpName.at(type_) << "\"];\n\n";
         }
 };
 
@@ -77,7 +178,7 @@ class GraphBuilder {
         }
 
         void Draw() {
-            std::ofstream image{kDotFile};
+            std::ofstream image{kDumpFolder + "/" + kDotFile};
             if (!image) {
                 std::cerr << "Error creating image!\n";
                 return;
@@ -96,8 +197,8 @@ class GraphBuilder {
 
             image_num_++;
 
-            std::string command = std::string("dot -Tsvg ") + kDotFile
-                + std::string(" -o Dump_") + std::to_string(image_num_) + std::string(".svg");
+            std::string command = std::string("dot -Tsvg ") + kDumpFolder + "/" + kDotFile
+                + " -o" + kDumpFolder + "/Dump_" + std::to_string(image_num_) + std::string(".svg");
             int ret = system(command.c_str());
             if (ret != 0) {
                 std::cerr << "Failed to build graph. Return code : " << ret << "\n";
