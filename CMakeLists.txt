@@ -37,7 +37,7 @@ target_compile_options (${PROJECT_NAME}
         -march=native
         $<$<CONFIG:Debug>:
             -Og
-            -fno-elide-constructors
+            # -fno-elide-constructors
             -g3
             -DDEBUG
             -ggdb
@@ -58,6 +58,7 @@ target_link_options (${PROJECT_NAME}
         -export-dynamic
         $<$<CONFIG:Debug>:
             -Og
+            # -fno-elide-constructors
             -g3
             -DDEBUG
             -ggdb

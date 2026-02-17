@@ -1,14 +1,32 @@
+#define RVALUE
+#define LVALUE
+#define RVALUE_MOVE_FUNC
+
 #include "microscope.hpp"
 
-int BinSearch(Micro<int>* arr, int val, int len);
+int BinSearch(Micro<int>* arr, Micro<int> val, Micro<int> len);
 
 int main() {
     SetLogLevel(kDebug);
 
-    Micro<int> arr[10] = {};
+    // UB constructor Example:
+    //---------------------------------------
+    // Micro<int> a(0, "a", "main");
+    // std::cout << a.GetName() << std::endl;
+    // Micro<int> b(a, true);
+    // std::cout << a.GetName() << std::endl;
+    //---------------------------------------
+
+
+    MICRO(int, a, 1);
+    MICRO(int, b, 1);
+    MICRO(int, c, a + b);
 
     MICRO(int, size, 10);
+    Micro<int> arr[10] = {};
+
     for (MICRO(int, i,0); i < size; i++) {
+        MICRO_UPDATENAME(arr[i]);
         arr[i] = i;
     }
 
@@ -18,9 +36,9 @@ int main() {
     Micro<int>::graph_builder.Draw();
 }
 
-int BinSearch(Micro<int>* arr, int val_, int size_) {
-    MICRO(int, val, val_);
-    MICRO(int, size, size_);
+int BinSearch(Micro<int>* arr, Micro<int> val, Micro<int> size) {
+    MICRO_UPDATENAME(val);
+    MICRO_UPDATENAME(size);
     MICRO(int, ind, size / 2);
 
     if ((size == 1) && (val != arr[ind])) {
@@ -28,11 +46,19 @@ int BinSearch(Micro<int>* arr, int val_, int size_) {
     }
 
     if (arr[ind] > val) {
+#ifdef RVALUE_MOVE_FUNC
+        return BinSearch(arr, std::move(val), std::move(ind));
+#else
         return BinSearch(arr, val, ind);
+#endif
     }
 
     if (arr[ind] < val) {
+#ifdef RVALUE_MOVE_FUNC
+        return BinSearch(arr + ind, std::move(val), size - ind) + ind;
+#else
         return BinSearch(arr + ind, val, size - ind) + ind;
+#endif
     }
 
     return ind;

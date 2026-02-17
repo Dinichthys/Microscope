@@ -6,31 +6,9 @@
 #include <fstream>
 #include <map>
 
-class Node {
-    private:
-        size_t id_;
-        std::string name_;
-
-    public:
-        Node(size_t id, std::string& name)
-            :name_(name) {
-            id_ = id;
-        };
-
-        void Print(std::ostream& output) {
-            output << "\t\"node" << id_ << "\"\n\t[\n"
-                                "\t\tlabel = \""
-                                "{ " << id_ << " id | "
-                                << ((name_.compare("")) ? name_.c_str() : "TMP") << "  }\"\n"
-                                "\t\tshape = \"record\"\n"
-                                "\t\tstyle = \"filled\"\n"
-                                "\t\tfillcolor = \"white\"\n"
-                                "\t\tcolor = \"black\"\n"
-                                "\t];\n\n";
-        }
-};
-
 enum Type {
+    kNone,
+
     kCopy,
     kMove,
 
@@ -82,7 +60,12 @@ enum Type {
     kAssign
 };
 
-const std::map<Type, std::string> kOpName {
+enum NodeType {
+    kOp,
+    kVar
+};
+
+static const std::map<Type, std::string> kOpName {
     {kCopy, "Copy construct"},
     {kMove, "Move construct"},
 
@@ -134,9 +117,73 @@ const std::map<Type, std::string> kOpName {
     {kAssign, "Assign"},
 };
 
-const char* const kRed = "red";
-const char* const kGreen = "green";
-const char* const kBlack = "black";
+static const char* const kRedEdge = "red";
+static const char* const kGreenEdge = "#30A030";
+static const char* const kBlackEdge = "black";
+
+static const char* const kGreenNode = "#80FF80";
+static const char* const kYellowNode = "#F0FF80";
+
+static const size_t kConstructEdgeWidth = 3;
+static const size_t kDefaultEdgeWidth = 1;
+
+class Node {
+    private:
+        size_t id_;
+        std::string name_;
+        std::string func_name_;
+
+        NodeType type_;
+        Type op_;
+
+    public:
+        Node(size_t id, const std::string& name, const std::string func_name)
+            :name_(name), func_name_(func_name) {
+            id_ = id;
+            type_ = kVar;
+            op_ = kNone;
+        };
+
+        void Print(std::ostream& output) {
+            output << "\t\"node" << id_ << "\"\n\t[\n"
+                                "\t\tlabel = \""
+                                << ((type_ == kOp) ? kOpName.at(op_) :
+                                "{ " + std::to_string(id_) + " id | "
+                                + ((name_.compare("")) ? name_.c_str() : "TMP") + " }")
+                                << "\"\n"
+                                << "\t\tshape = \""
+                                << ((type_ == kVar) ? "record" : "doubleoctagon")
+                                << "\"\n"
+                                "\t\tstyle = \"filled\"\n"
+                                "\t\tfillcolor = \""
+                                << ((name_.compare("")) ? "white" :
+                                (((op_ == kCopy) || (op_ == kMove)) ? kYellowNode : kGreenNode))
+                                << "\"\n"
+                                "\t\tcolor = \"black\"\n"
+                                "\n"
+                                "\t];\n\n";
+        }
+
+        void UpdateName(const std::string& name, const std::string& func_name) {
+            name_ = name;
+            func_name_ = func_name;
+        }
+
+        const char* GetFuncName() const {
+            return func_name_.c_str();
+        }
+        const char* GetName() const {
+            return name_.c_str();
+        }
+        size_t GetID() const {
+            return id_;
+        }
+
+        void SetType(NodeType type, Type op) {
+            type_ = type;
+            op_ = op;
+        }
+};
 
 class Edge {
     private:
@@ -153,29 +200,31 @@ class Edge {
 
         void Print(std::ostream& output) {
             output << "\t\"node" << id_start_ << "\" -> \"node" << id_end_ << "\""
-                    "[color = \"" << ((type_ == kCopy) ? kRed : (type_ == kMove) ? kGreen : kBlack) << "\""
-                    " label = \"" << kOpName.at(type_) << "\"];\n\n";
+                    "[color = \""
+                    << ((type_ == kCopy) ? kRedEdge : (type_ == kMove) ? kGreenEdge : kBlackEdge)
+                    << "\""
+                    // " label = \""
+                    // << kOpName.at(type_)
+                    // << "\""
+                    << "\t\tpenwidth = "
+                    << (((type_ == kCopy) || (type_ == kMove)) ? kConstructEdgeWidth : kDefaultEdgeWidth)
+                    << "];\n\n";
         }
 };
 
-const std::string kDumpFolder = "DumpFiles";
-const std::string kDotFile = "Dump.dot";
+static const std::string kDumpFolder = "DumpFiles";
+static const std::string kDotFile = "Dump.dot";
 
 class GraphBuilder {
     private:
         size_t image_num_;
 
-        size_t next_id_;
         std::vector<Node> nodes_;
         std::vector<Edge> edges_;
 
     public:
         GraphBuilder()
-            :image_num_(0), next_id_(0), nodes_(), edges_() {};
-
-        size_t GetNextId() {
-            return next_id_++;
-        }
+            :image_num_(0), nodes_(), edges_() {};
 
         void Draw() {
             std::ofstream image{kDumpFolder + "/" + kDotFile};
@@ -185,6 +234,7 @@ class GraphBuilder {
             }
 
             image << "digraph\n{\n"
+                    "\tcompound=true;\n"
                     "\tfontname = \"Helvetica,Arial,sans-serif\";\n"
                     "\tnode [fontname = \"Helvetica,Arial,sans-serif\"];\n"
                     "\tgraph [rankdir = \"TB\"];\n"
@@ -198,25 +248,63 @@ class GraphBuilder {
             image_num_++;
 
             std::string command = std::string("dot -Tsvg ") + kDumpFolder + "/" + kDotFile
-                + " -o" + kDumpFolder + "/Dump_" + std::to_string(image_num_) + std::string(".svg");
+                + " -o " + kDumpFolder + "/Dump_" + std::to_string(image_num_) + std::string(".svg");
             int ret = system(command.c_str());
             if (ret != 0) {
+                std::cerr << command << std::endl;
                 std::cerr << "Failed to build graph. Return code : " << ret << "\n";
             }
         }
 
-        size_t AddNode(std::string& name) {
-            nodes_.push_back(Node(next_id_, name));
-            return next_id_++;
+        size_t AddNode(const std::string& name, const std::string func_name) {
+            nodes_.push_back(Node(nodes_.size(), name, func_name));
+            return nodes_.size() - 1;
         }
 
         void AddEdge(size_t start, size_t end, Type type) {
-            edges_.push_back(Edge(start, end, type));
+            if ((type != kCopy) && (type != kMove)) {
+                edges_.push_back(Edge(start, end, type));
+                nodes_[end].SetType(kOp, type);
+            } else {
+                size_t res = AddNode("", nodes_[start].GetFuncName());
+                nodes_[res].SetType(kOp, type);
+                edges_.push_back(Edge(start, res, type));
+                edges_.push_back(Edge(res, end, type));
+            }
+        }
+
+        void UpdateNodeName(size_t id, const std::string& name, const std::string& func_name) {
+            nodes_[id].UpdateName(name, func_name);
         }
 
     private:
         void Print(std::ostream& output) {
-            for (auto node : nodes_) {node.Print(output);}
+            std::map<std::string, std::vector<size_t>> funcs_and_vars = {};
+
+            for (auto node : nodes_) {
+                funcs_and_vars[node.GetFuncName()].push_back(node.GetID());
+            }
+
+            size_t i = 0;
+            for (auto func : funcs_and_vars) {
+                output << "\tsubgraph cluster_" << i++ << " {\n"
+                    "\t\tnode [style=filled];\n"
+                    "\t\t";
+
+                for (auto var : func.second) {
+                    output << " \"node" << var << "\"";
+                }
+
+                output << ";\n"
+                          "\t\tlabel = \"" << ((func.first.compare("")) ? func.first.c_str() : "TMP") << "\";\n"
+                          "\t\tcolor=blue;\n"
+                          "\t}\n\n";
+            }
+
+            for (auto node : nodes_) {
+                node.Print(output);
+            }
+
             for (auto edge : edges_) {edge.Print(output);}
         }
 

@@ -20,42 +20,92 @@ class Micro {
         T val_;
 
         std::string name_;
+        std::string func_name_;
 
     public:
-        explicit Micro(T val = 0, std::string&& name = "")
-            :name_(name) {
+        explicit Micro(T val = 0, const std::string& name = "", const std::string& func_name = "")
+            :name_(name), func_name_(func_name) {
             LOG(kDebug, "Constructor was called with arguments:\n"
                         "\tname = \"%s\"\n", name.c_str());
             val_ = val;
-            graph_id_ = graph_builder.AddNode(name);
+            graph_id_ = graph_builder.AddNode(name, func_name);
         };
 
-        Micro(Micro& other)
-            :name_("copied_" + other.name_) {
+        Micro(const Micro& val, const std::string& name, const std::string& func_name)
+            :name_(name), func_name_(func_name) {
+            LOG(kDebug, "Constructor was called with arguments:\n"
+                        "\tname = \"%s\"\n", name.c_str());
+            val_ = val;
+            graph_id_ = graph_builder.AddNode(name, func_name);
+            graph_builder.AddEdge(val.graph_id_, graph_id_, kCopy);
+        };
+
+        Micro(const Micro&& val, const std::string& name, const std::string& func_name)
+            :name_(name), func_name_(func_name) {
+            LOG(kDebug, "Constructor was called with arguments:\n"
+                        "\tname = \"%s\"\n", name.c_str());
+            val_ = val;
+            graph_id_ = graph_builder.AddNode(name, func_name);
+            graph_builder.AddEdge(val.graph_id_, graph_id_, kMove);
+        };
+
+        Micro(const Micro& other)
+            :name_(other.name_), func_name_(other.func_name_) {
             LOG(kDebug, RED "Copy" WHITE " constructor was called with arguments:\n"
                         "\tname = \"%s\"\n", other.name_.c_str());
             val_ = other.val_;
-            graph_id_ = graph_builder.AddNode(name_);
+            graph_id_ = graph_builder.AddNode(name_, func_name_);
             graph_builder.AddEdge(other.graph_id_, graph_id_, kCopy);
         };
 
-        Micro(Micro&& other)
-            :name_("moved_" + other.name_) {
+#ifdef RVALUE
+        Micro(const Micro&& other)
+            :name_(other.name_), func_name_(other.func_name_) {
             LOG(kDebug, GREEN "Move" WHITE " constructor was called with arguments:\n"
                         "\tname = \"%s\"\n", other.name_.c_str());
             val_ = other.val_;
-            graph_id_ = graph_builder.AddNode(name_);
+            graph_id_ = graph_builder.AddNode(name_, func_name_);
             graph_builder.AddEdge(other.graph_id_, graph_id_, kMove);
         };
+#endif
 
+        // Example:
+        // Micro<int> a(0, "a", "main");
+        // Micro<int> b(a, true);
+        // ==> a.name_ disappeared
+        Micro(Micro& other, bool ub_flag)
+            :name_(std::move(other.name_)), func_name_(std::move(other.func_name_)) {
+
+            if (!ub_flag) {
+                throw std::runtime_error("UB constructor was called with unexpected flag");
+            }
+
+            LOG(kDebug, RED "UB CONSTRUCTOR" WHITE);
+
+            val_ = other.val_;
+            graph_id_ = graph_builder.AddNode(name_, func_name_);
+            graph_builder.AddEdge(other.graph_id_, graph_id_, kCopy);
+        };
+
+#ifdef LVALUE
 #define OP_TWO_ARGS(op, op_type)                                                                            \
-        Micro operator op(Micro A) {                                                                        \
+        Micro operator op(const Micro& A) {                                                                        \
             LOG(kDebug, "%s var \"%s\" and \"%s\"\n", kOpName.at(op_type), name_.c_str(), A.name_.c_str()); \
-            Micro res(val_ op A.val_, "");                                                               \
+            Micro res(val_ op A.val_, "", __FUNCTION__);                                                               \
             graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                                       \
             graph_builder.AddEdge(A.graph_id_, res.graph_id_, op_type);                                     \
             return res;                                                                                     \
         };
+#else
+#define OP_TWO_ARGS(op, op_type)                                                                            \
+        Micro operator op(const Micro A) {                                                                        \
+            LOG(kDebug, "%s var \"%s\" and \"%s\"\n", kOpName.at(op_type), name_.c_str(), A.name_.c_str()); \
+            Micro res(val_ op A.val_, "", __FUNCTION__);                                                               \
+            graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                                       \
+            graph_builder.AddEdge(A.graph_id_, res.graph_id_, op_type);                                     \
+            return res;                                                                                     \
+        };
+#endif
 
         OP_TWO_ARGS(+, kAdd);
         OP_TWO_ARGS(-, kSub);
@@ -94,7 +144,7 @@ class Micro {
 #define OP_ONE_ARG(op, op_type)                                                                  \
         Micro operator op() {                                                                    \
             LOG(kDebug, "%s with var \"%s\" and \"%s\"\n",  kOpName.at(op_type), name_.c_str()); \
-            Micro res(op val_, "");                                                              \
+            Micro res(op val_, "", __FUNCTION__);                                                              \
             graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                                       \
             return res;                                                                          \
         };
@@ -113,18 +163,22 @@ class Micro {
 
         Micro operator ++(int) {
             LOG(kDebug, "Postfix increment var \"%s\"\n", name_.c_str());
-            Micro res(val_++, "");
+            Micro res(val_++, "", __FUNCTION__);
             graph_builder.AddEdge(graph_id_, res.graph_id_, kPostfixInc);
             return res;
         };
         Micro operator --(int) {
             LOG(kDebug, "Postfix decrement var \"%s\"\n", name_.c_str());
-            Micro res(val_--, "");
+            Micro res(val_--, "", __FUNCTION__);
             graph_builder.AddEdge(graph_id_, res.graph_id_, kPostfixDec);
             return res;
         };
 
+#ifdef LVALUE
+        Micro& operator =(Micro& A) {
+#else
         Micro& operator =(Micro A) {
+#endif
             LOG(kDebug, "Assign var \"%s\" and \"%s\"\n", name_.c_str(), A.name_.c_str());
             val_ = A.val_;
             graph_builder.AddEdge(A.graph_id_, graph_id_, kAssign);
@@ -141,6 +195,21 @@ class Micro {
         operator T() const {
             return val_;
         };
+
+        const std::string& GetName() const {
+            return name_;
+        };
+
+        void UpdateName(const std::string&& name) {
+            name_ = std::move(name);
+        };
+
+        void UpdateNameAndFuncName(const std::string& name, const std::string& func_name) {
+            name_ = name;
+            func_name_ = func_name;
+            graph_builder.UpdateNodeName(graph_id_, name, func_name);
+        };
 };
 
-#define MICRO(type, var, val) Micro<type> var(val, #var)
+#define MICRO(type, var, val) Micro<type> var(val, #var, __FUNCTION__)
+#define MICRO_UPDATENAME(var) var.UpdateNameAndFuncName(#var, __FUNCTION__)
