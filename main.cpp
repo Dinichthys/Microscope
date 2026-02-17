@@ -2,9 +2,13 @@
 #define LVALUE
 #define RVALUE_MOVE_FUNC
 
-#include "microscope.hpp"
+#include "libs/microscope.hpp"
 
 int BinSearch(Micro<int>* arr, Micro<int> val, Micro<int> len);
+
+Micro<int> foo(const Micro<int>& val) {
+    return val;
+}
 
 int main() {
     SetLogLevel(kDebug);
@@ -17,6 +21,11 @@ int main() {
     // std::cout << a.GetName() << std::endl;
     //---------------------------------------
 
+    // Example with copy constructor:
+    //---------------------------------------
+    // MICRO(int, a, 0);
+    // Micro<int> b(foo(a));
+    //---------------------------------------
 
     MICRO(int, a, 1);
     MICRO(int, b, 1);
