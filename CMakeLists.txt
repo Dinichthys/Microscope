@@ -1,6 +1,8 @@
 cmake_minimum_required (VERSION 3.20)
 project (microscope CXX)
 
+set(CMAKE_CXX_COMPILER g++)
+
 add_executable (${PROJECT_NAME}
     main.cpp
 
@@ -10,6 +12,7 @@ add_executable (${PROJECT_NAME}
 target_include_directories (${PROJECT_NAME}
     PRIVATE
         .
+        libs
         Logger
 )
 

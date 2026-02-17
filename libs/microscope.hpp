@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "Logger/logging.hpp"
+#include "../Logger/logging.hpp"
 #include "graph_builder.hpp"
 
 #define RED "\033[31m"
@@ -40,7 +40,7 @@ class Micro {
             graph_builder.AddEdge(val.graph_id_, graph_id_, kCopy);
         };
 
-        Micro(const Micro&& val, const std::string& name, const std::string& func_name)
+        Micro(Micro&& val, const std::string& name, const std::string& func_name)
             :name_(name), func_name_(func_name) {
             LOG(kDebug, "Constructor was called with arguments:\n"
                         "\tname = \"%s\"\n", name.c_str());
@@ -59,7 +59,7 @@ class Micro {
         };
 
 #ifdef RVALUE
-        Micro(const Micro&& other)
+        Micro(Micro&& other)
             :name_(other.name_), func_name_(other.func_name_) {
             LOG(kDebug, GREEN "Move" WHITE " constructor was called with arguments:\n"
                         "\tname = \"%s\"\n", other.name_.c_str());
@@ -90,7 +90,7 @@ class Micro {
 #ifdef LVALUE
 #define OP_TWO_ARGS(op, op_type)                                                                            \
         Micro operator op(const Micro& A) {                                                                        \
-            LOG(kDebug, "%s var \"%s\" and \"%s\"\n", kOpName.at(op_type), name_.c_str(), A.name_.c_str()); \
+            LOG(kDebug, "%s var \"%s\" and \"%s\"\n", kOpName.at(op_type).c_str(), name_.c_str(), A.name_.c_str()); \
             Micro res(val_ op A.val_, "", __FUNCTION__);                                                               \
             graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                                       \
             graph_builder.AddEdge(A.graph_id_, res.graph_id_, op_type);                                     \
@@ -99,7 +99,7 @@ class Micro {
 #else
 #define OP_TWO_ARGS(op, op_type)                                                                            \
         Micro operator op(const Micro A) {                                                                        \
-            LOG(kDebug, "%s var \"%s\" and \"%s\"\n", kOpName.at(op_type), name_.c_str(), A.name_.c_str()); \
+            LOG(kDebug, "%s var \"%s\" and \"%s\"\n", kOpName.at(op_type).c_str(), name_.c_str(), A.name_.c_str()); \
             Micro res(val_ op A.val_, "", __FUNCTION__);                                                               \
             graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                                       \
             graph_builder.AddEdge(A.graph_id_, res.graph_id_, op_type);                                     \
