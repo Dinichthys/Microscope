@@ -22,8 +22,8 @@ int main() {
     MICRO(int, b, 1);
     MICRO(int, c, a + b);
 
-    MICRO(int, size, 10);
-    Micro<int> arr[10] = {};
+    MICRO(int, size, 5);
+    Micro<int> arr[5] = {};
 
     for (MICRO(int, i,0); i < size; i++) {
         MICRO_UPDATENAME(arr[i]);
