@@ -4,6 +4,7 @@
 
 #include "../Logger/logging.hpp"
 #include "graph_builder.hpp"
+#include "scope.hpp"
 
 #define RED "\033[31m"
 #define WHITE "\033[0m"
@@ -88,22 +89,24 @@ class Micro {
         };
 
 #ifdef LVALUE
-#define OP_TWO_ARGS(op, op_type)                                                                            \
-        Micro operator op(const Micro& A) {                                                                        \
+#define OP_TWO_ARGS(op, op_type)                                                                                    \
+        Micro operator op(const Micro& A) {                                                                         \
             LOG(kDebug, "%s var \"%s\" and \"%s\"\n", kOpName.at(op_type).c_str(), name_.c_str(), A.name_.c_str()); \
-            Micro res(val_ op A.val_, "", __FUNCTION__);                                                               \
-            graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                                       \
-            graph_builder.AddEdge(A.graph_id_, res.graph_id_, op_type);                                     \
-            return res;                                                                                     \
+            TRACE;                                                                                                  \
+            Micro res(val_ op A.val_, "", trace);                                                                   \
+            graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                                               \
+            graph_builder.AddEdge(A.graph_id_, res.graph_id_, op_type);                                             \
+            return res;                                                                                             \
         };
 #else
-#define OP_TWO_ARGS(op, op_type)                                                                            \
-        Micro operator op(const Micro A) {                                                                        \
+#define OP_TWO_ARGS(op, op_type)                                                                                    \
+        Micro operator op(const Micro A) {                                                                          \
             LOG(kDebug, "%s var \"%s\" and \"%s\"\n", kOpName.at(op_type).c_str(), name_.c_str(), A.name_.c_str()); \
-            Micro res(val_ op A.val_, "", __FUNCTION__);                                                               \
-            graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                                       \
-            graph_builder.AddEdge(A.graph_id_, res.graph_id_, op_type);                                     \
-            return res;                                                                                     \
+            TRACE;                                                                                                  \
+            Micro res(val_ op A.val_, "", trace);                                                                   \
+            graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                                               \
+            graph_builder.AddEdge(A.graph_id_, res.graph_id_, op_type);                                             \
+            return res;                                                                                             \
         };
 #endif
 
@@ -144,8 +147,9 @@ class Micro {
 #define OP_ONE_ARG(op, op_type)                                                                  \
         Micro operator op() {                                                                    \
             LOG(kDebug, "%s with var \"%s\" and \"%s\"\n",  kOpName.at(op_type), name_.c_str()); \
-            Micro res(op val_, "", __FUNCTION__);                                                              \
-            graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                                       \
+            TRACE;                                                                               \
+            Micro res(op val_, "", trace);                                                       \
+            graph_builder.AddEdge(graph_id_, res.graph_id_, op_type);                            \
             return res;                                                                          \
         };
 
@@ -163,13 +167,15 @@ class Micro {
 
         Micro operator ++(int) {
             LOG(kDebug, "Postfix increment var \"%s\"\n", name_.c_str());
-            Micro res(val_++, "", __FUNCTION__);
+            TRACE;
+            Micro res(val_++, "", trace);
             graph_builder.AddEdge(graph_id_, res.graph_id_, kPostfixInc);
             return res;
         };
         Micro operator --(int) {
             LOG(kDebug, "Postfix decrement var \"%s\"\n", name_.c_str());
-            Micro res(val_--, "", __FUNCTION__);
+            TRACE;
+            Micro res(val_--, "", trace);
             graph_builder.AddEdge(graph_id_, res.graph_id_, kPostfixDec);
             return res;
         };
