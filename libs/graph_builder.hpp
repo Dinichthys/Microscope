@@ -330,7 +330,7 @@ class GraphBuilder {
             for (; tmp_iter != funcs_and_vars.end(); tmp_iter++) {
                 auto func = tmp_iter;
 
-                if (iter->first.compare(func->first.substr(0, iter->first.length()))) {
+                if ((iter->first + "/").compare(func->first.substr(0, iter->first.length() + 1))) {
                     continue;
                 }
 
