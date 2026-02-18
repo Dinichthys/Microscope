@@ -211,5 +211,5 @@ class Micro {
         };
 };
 
-#define MICRO(type, var, val) Micro<type> var(val, #var, __FUNCTION__)
-#define MICRO_UPDATENAME(var) var.UpdateNameAndFuncName(#var, __FUNCTION__)
+#define MICRO(type, var, val) Micro<type> var(val, #var, trace)
+#define MICRO_UPDATENAME(var) var.UpdateNameAndFuncName(#var, trace)

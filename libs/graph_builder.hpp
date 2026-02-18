@@ -124,7 +124,7 @@ static const char* const kBlackEdge = "black";
 static const char* const kGreenNode = "#80FF80";
 static const char* const kYellowNode = "#F0FF80";
 
-static const size_t kConstructEdgeWidth = 3;
+static const size_t kConstructEdgeWidth = 5;
 static const size_t kDefaultEdgeWidth = 1;
 
 class Node {
@@ -215,6 +215,10 @@ class Edge {
 static const std::string kDumpFolder = "DumpFiles";
 static const std::string kDotFile = "Dump.dot";
 
+static const size_t kRGBMax = 255;
+static const size_t kStep = 16;
+static const size_t kRGBMin = 100;
+
 class GraphBuilder {
     private:
         size_t image_num_;
@@ -286,19 +290,29 @@ class GraphBuilder {
             }
 
             size_t i = 0;
-            for (auto func : funcs_and_vars) {
+            for (auto iter = funcs_and_vars.begin(); iter != funcs_and_vars.end(); iter++) {
+                auto func = iter;
                 output << "\tsubgraph cluster_" << i++ << " {\n"
                     "\t\tnode [style=filled];\n"
+                    "\t\tstyle=\"filled\";\n"
+                    "\t\tfillcolor=\"#"
+                    << std::hex << kRGBMax - kStep
+                    << std::hex << kRGBMax - kStep
+                    << std::hex << kRGBMax - kStep
+                    << "\"\n"
                     "\t\t";
 
-                for (auto var : func.second) {
+                for (auto var : func->second) {
                     output << " \"node" << var << "\"";
                 }
 
                 output << ";\n"
-                          "\t\tlabel = \"" << ((func.first.compare("")) ? func.first.c_str() : "TMP") << "\";\n"
-                          "\t\tcolor=blue;\n"
-                          "\t}\n\n";
+                          "\t\tlabel = \"" << ((func->first.compare("")) ? func->first.c_str() : "TMP") << "\";\n"
+                          "\t\tcolor=blue;\n";
+
+                CreateSubGraphs(funcs_and_vars, iter, output, i, 1);
+
+                output << "\t}\n\n";
             }
 
             for (auto node : nodes_) {
@@ -306,6 +320,45 @@ class GraphBuilder {
             }
 
             for (auto edge : edges_) {edge.Print(output);}
-        }
+        };
+
+        void CreateSubGraphs(const std::map<std::string, std::vector<size_t>>& funcs_and_vars,
+                             const std::map<std::string, std::vector<size_t>>::const_iterator& iter,
+                             std::ostream& output, size_t& subgraph_num, size_t depth) {
+            auto tmp_iter = iter;
+            tmp_iter++;
+            for (; tmp_iter != funcs_and_vars.end(); tmp_iter++) {
+                auto func = tmp_iter;
+
+                if (iter->first.compare(func->first.substr(0, iter->first.length()))) {
+                    continue;
+                }
+
+                size_t color = (kRGBMax > kStep *  (depth + 1) + kRGBMin) ? kRGBMax - kStep *  (depth + 1) : kRGBMin;
+
+                output << "\tsubgraph cluster_" << subgraph_num++ << " {\n"
+                    "\t\tnode [style=filled];\n"
+                    "\t\tstyle=\"filled\";\n"
+                    "\t\tfillcolor=\"#"
+                    << std::hex << color
+                    << std::hex << color
+                    << std::hex << color
+                    << "\"\n"
+                    "\t\t";
+
+                for (auto var : func->second) {
+                    output << " \"node" << var << "\"";
+                }
+
+                output << ";\n"
+                          "\t\tlabel = \"" << ((func->first.compare("")) ? func->first.c_str() : "TMP") << "\";\n"
+                          "\t\tcolor=blue;\n";
+
+                CreateSubGraphs(funcs_and_vars, tmp_iter, output, subgraph_num, depth + 1);
+
+                output << "\t}\n\n";
+            }
+
+        };
 
 };
